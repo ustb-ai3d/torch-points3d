@@ -126,6 +126,7 @@ class Liquid3D(InMemoryDataset):
     def __repr__(self):
         return "{}({})".format(self.__class__.__name__, len(self))
 
+class Liquid3dDataset(BaseDataset):
 
 class ShapeNetDataset(BaseDataset):
     def __init__(self, dataset_opt):

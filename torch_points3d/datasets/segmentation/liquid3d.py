@@ -15,14 +15,16 @@ from torch_points3d.metrics.shapenet_part_tracker import ShapenetPartTracker
 from torch_points3d.datasets.base_dataset import BaseDataset, save_used_properties
 from torch_points3d.utils.download import download_url
 
+
 def gen_liquid3d_raw():
     # 大概的数据结构，每执行一次本函数，取出一个【输入+输出】
     # in_pos: [points_num, 3] 每个点的坐标
     # in_feats: [points_num, feats_channel] 每个点的特征。如果模型不支持输入特征，则忽略该向量
     # out: [points_num, 3] 每个点的输出。原始点云分割任务中是[points_num, 16]，对应每个点的16个通道代表16个类的概率预测。在这里我们只输出3个通道，可能是速度也可能是加速度的xyz值。
 
-    in_pos, in_feats,out = torch.ones((None, 3)),torch.ones((None, 3)),torch.ones((None, 3)) # 随便写的
+    in_pos, in_feats, out = torch.ones((None, 3)), torch.ones((None, 3)), torch.ones((None, 3))  # 随便写的
     return in_pos, in_feats, out
+
 
 class ShapeNet(InMemoryDataset):
     r"""The ShapeNet part level segmentation dataset from the `"A Scalable
@@ -122,8 +124,7 @@ class ShapeNet(InMemoryDataset):
         assert all(category in self.category_ids for category in categories)
         self.categories = categories
         self.is_test = is_test
-        super(ShapeNet, self).__init__(
-            root, transform, pre_transform, pre_filter)
+        super(ShapeNet, self).__init__(root, transform, pre_transform, pre_filter)
 
         if split == "train":
             path = self.processed_paths[0]
@@ -138,28 +139,23 @@ class ShapeNet(InMemoryDataset):
             path = self.processed_paths[3]
             raw_path = self.processed_raw_paths[3]
         else:
-            raise ValueError(
-                (f"Split {split} found, but expected either " "train, val, trainval or test"))
+            raise ValueError((f"Split {split} found, but expected either " "train, val, trainval or test"))
 
-        self.data, self.slices, self.y_mask = self.load_data(
-            path, include_normals)
+        self.data, self.slices, self.y_mask = self.load_data(path, include_normals)
 
         # We have perform a slighly optimzation on memory space of no pre-transform was used.
         # c.f self._process_filenames
         if os.path.exists(raw_path):
-            self.raw_data, self.raw_slices, _ = self.load_data(
-                raw_path, include_normals)
+            self.raw_data, self.raw_slices, _ = self.load_data(raw_path, include_normals)
         else:
             self.get_raw_data = self.get
 
     def load_data(self, path, include_normals):
-        '''This function is used twice to load data for both raw and pre_transformed
-        '''
+        """This function is used twice to load data for both raw and pre_transformed"""
         data, slices = torch.load(path)
         data.x = data.x if include_normals else None
 
-        y_mask = torch.zeros(
-            (len(self.seg_classes.keys()), 50), dtype=torch.bool)
+        y_mask = torch.zeros((len(self.seg_classes.keys()), 50), dtype=torch.bool)
         for i, labels in enumerate(self.seg_classes.values()):
             y_mask[i, labels] = 1
 
@@ -172,8 +168,9 @@ class ShapeNet(InMemoryDataset):
     @property
     def processed_raw_paths(self):
         cats = "_".join([cat[:3].lower() for cat in self.categories])
-        processed_raw_paths = [os.path.join(self.processed_dir, "raw_{}_{}".format(
-            cats, s)) for s in ["train", "val", "test", "trainval"]]
+        processed_raw_paths = [
+            os.path.join(self.processed_dir, "raw_{}_{}".format(cats, s)) for s in ["train", "val", "test", "trainval"]
+        ]
         return processed_raw_paths
 
     @property
@@ -194,7 +191,7 @@ class ShapeNet(InMemoryDataset):
     def get_raw_data(self, idx, **kwargs):
         data = self.raw_data.__class__()
 
-        if hasattr(self.raw_data, '__num_nodes__'):
+        if hasattr(self.raw_data, "__num_nodes__"):
             data.num_nodes = self.raw_data.__num_nodes__[idx]
 
         for key in self.raw_data.keys:
@@ -231,8 +228,7 @@ class ShapeNet(InMemoryDataset):
             y = data[:, -1].type(torch.long)
             category = torch.ones(x.shape[0], dtype=torch.long) * cat_idx[cat]
             id_scan_tensor = torch.from_numpy(np.asarray([id_scan])).clone()
-            data = Data(pos=pos, x=x, y=y, category=category,
-                        id_scan=id_scan_tensor)
+            data = Data(pos=pos, x=x, y=y, category=category, id_scan=id_scan_tensor)
             data = SaveOriginalPosId()(data)
             if self.pre_filter is not None and not self.pre_filter(data):
                 continue
@@ -254,8 +250,7 @@ class ShapeNet(InMemoryDataset):
         train, val = trainval
         for v in val:
             v.id_scan += len(train)
-        assert (train[-1].id_scan + 1 ==
-                val[0].id_scan).item(), (train[-1].id_scan, val[0].id_scan)
+        assert (train[-1].id_scan + 1 == val[0].id_scan).item(), (train[-1].id_scan, val[0].id_scan)
         return train + val
 
     def process(self):
@@ -264,34 +259,31 @@ class ShapeNet(InMemoryDataset):
         raw_trainval = []
         trainval = []
         for i, split in enumerate(["train", "val", "test"]):
-            path = osp.join(self.raw_dir, "train_test_split",
-                            f"shuffled_{split}_file_list.json")
+            path = osp.join(self.raw_dir, "train_test_split", f"shuffled_{split}_file_list.json")
             with open(path, "r") as f:
                 filenames = [
-                    osp.sep.join(name.split('/')[1:]) + ".txt" for name in json.load(f)
+                    osp.sep.join(name.split("/")[1:]) + ".txt" for name in json.load(f)
                 ]  # Removing first directory.
-            data_raw_list, data_list = self._process_filenames(
-                sorted(filenames))
+            data_raw_list, data_list = self._process_filenames(sorted(filenames))
             if split == "train" or split == "val":
                 if len(data_raw_list) > 0:
                     raw_trainval.append(data_raw_list)
                 trainval.append(data_list)
 
             self._save_data_list(data_list, self.processed_paths[i])
-            self._save_data_list(
-                data_raw_list, self.processed_raw_paths[i], save_bool=len(data_raw_list) > 0)
+            self._save_data_list(data_raw_list, self.processed_raw_paths[i], save_bool=len(data_raw_list) > 0)
 
-        self._save_data_list(self._re_index_trainval(
-            trainval), self.processed_paths[3])
-        self._save_data_list(self._re_index_trainval(
-            raw_trainval), self.processed_raw_paths[3], save_bool=len(raw_trainval) > 0)
+        self._save_data_list(self._re_index_trainval(trainval), self.processed_paths[3])
+        self._save_data_list(
+            self._re_index_trainval(raw_trainval), self.processed_raw_paths[3], save_bool=len(raw_trainval) > 0
+        )
 
     def __repr__(self):
         return "{}({}, categories={})".format(self.__class__.__name__, len(self), self.categories)
 
 
 class ShapeNetDataset(BaseDataset):
-    """ Wrapper around ShapeNet that creates train and test datasets.
+    """Wrapper around ShapeNet that creates train and test datasets.
 
     Parameters
     ----------

@@ -149,7 +149,7 @@ class Liquid3D(InMemoryDataset):
     def process(self):
         trainval = []
         for i, split in enumerate(["train", "valid"]):
-            path = osp.join(self.raw_dir, split)
+            path = osp.join(self.root, split)
             filenames = [name for name in os.listdir(path) if name.split('.')[-1] == 'zst']
             data_raw_list, data_list = self._process_filenames(sorted(filenames), path)
             if split == "train" or split == "valid":

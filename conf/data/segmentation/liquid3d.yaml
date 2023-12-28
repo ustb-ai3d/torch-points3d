@@ -4,7 +4,7 @@ defaults:
 
 class: liquid3d.Liquid3dDataset
 task: segmentation
-dataroot: data
+dataroot: /root/datasets
 first_subsampling: 0.02 # Grid size of the input data
 use_category: True # Use object category information
 pre_transforms: # Offline transforms, done only once
